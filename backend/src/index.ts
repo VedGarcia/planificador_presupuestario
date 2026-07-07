@@ -20,7 +20,7 @@ app.get('/api/transactions', (req, res) => {
     }
 });
 
-app.post('api/transaction', (req, res) => {
+app.post('/api/transactions', (req, res) => {
     const { type, category, date, frequency, term, amount, notes } = req.body;
 
     if (!type || !category || !frequency || amount === undefined) {
