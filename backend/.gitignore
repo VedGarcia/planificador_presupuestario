@@ -1,0 +1,23 @@
+# Dependencias
+node_modules/
+
+# Compilación y caché de TypeScript
+dist/
+build/
+*.tsbuildinfo
+
+# Base de datos SQLite local
+finanzas.db
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Variables de entorno y secretos
+.env
+*.env
+
+# Logs
+logs/
+*.log
+pnpm-debug.log*
