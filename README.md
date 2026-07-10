@@ -2,17 +2,17 @@
 
 Este proyecto es un **Planificador Presupuestario** que consta de una aplicación web moderna (Frontend) y un servidor de API REST con persistencia de datos local (Backend).
 
-La aplicación permite gestionar transacciones financieras (ingresos, gastos obligatorios/necesidades y gastos deseados/deseos), categorizarlas, especificar su frecuencia y realizar el seguimiento de los montos para optimizar la planificación de finanzas personales.
+La aplicación permite gestionar transacciones financieras (ingresos, gastos obligatorios/necesidades y gastos deseados/deseos), categorizarlas y planificarlas tanto a nivel de presupuesto como en el libro diario real. Está diseñada con blindaje multimoneda, lo que facilita el seguimiento de montos en divisa estable (USD) e inflación local (Bs/Arg/etc.) con conversión en tiempo real.
 
 ---
 
 ## 🛠️ Stack Tecnológico y Especificaciones
 
 ### Frontend
-- **Framework:** React 19 (con React Compiler habilitado para optimizar el renderizado de componentes)
+- **Framework:** React 19 (con React Compiler habilitado para optimizar el renderizado)
 - **Herramienta de construcción:** Vite 8
 - **Lenguaje:** TypeScript
-- **Estilos:** Tailwind CSS v4 (mediante `@tailwindcss/vite` para compilación en tiempo de construcción rápida y optimizada)
+- **Estilos:** Tailwind CSS v4 (mediante `@tailwindcss/vite` para compilación rápida)
 - **Gráficos:** Recharts (para diagramas y analíticas visuales de presupuestos y balances)
 - **Iconos:** Lucide React
 - **Gestor de paquetes:** pnpm
@@ -20,9 +20,9 @@ La aplicación permite gestionar transacciones financieras (ingresos, gastos obl
 ### Backend
 - **Framework:** Express v5
 - **Lenguaje:** TypeScript
-- **Entorno de ejecución y transpilación en desarrollo:** `ts-node-dev` (recarga automática al detectar cambios en el código)
+- **Entorno de ejecución en desarrollo:** `ts-node-dev` (recarga automática)
 - **Base de Datos:** SQLite a través del driver síncrono de alto rendimiento `better-sqlite3`
-- **CORS:** Habilitado para permitir la comunicación cruzada con el frontend
+- **CORS:** Habilitado para comunicación cruzada
 - **Gestor de paquetes:** pnpm
 
 ---
@@ -30,30 +30,34 @@ La aplicación permite gestionar transacciones financieras (ingresos, gastos obl
 ## 🚀 Características y Funcionalidades
 
 ### Frontend (Interfaz de Usuario)
-- **Dashboard Interactivo:** Preparado para visualizar gráficos financieros usando [Recharts](https://recharts.org/) (análisis de ingresos vs. gastos, distribución de presupuesto, etc.).
-- **Diseño Moderno y Responsivo:** Estructurado utilizando Tailwind CSS v4 para ofrecer una excelente visualización tanto en móviles como en computadoras de escritorio.
-- **Interactividad en tiempo real:** Navegación fluida y componentes reactivos.
+- **Dashboard Multimoneda:** Permite ver y alternar entre los modos de **Planificación** (Presupuestos en USD) y **Diario Ejecutado** (Gastos reales en USD o Moneda Local).
+- **Mesa de Control:** Gráficos interactivos de barra (Recharts) que muestran la desviación entre el presupuesto Planificado y la ejecución Real.
+- **Alertas de Salud Financiera:** Muestra indicadores de porcentaje de consumo sobre el presupuesto de gastos vitales (Needs) y del ingreso ejecutado.
+- **Panel de Configuración:** Configuración dinámica de categorías (conceptos), tipo de divisa por defecto y tasa base de cambio del día.
+- **Estructura Modularizada:** Componentes separados para mejorar el mantenimiento:
+  - Modales de transacciones y configuración.
+  - Tablas analíticas y paneles de analítica visual.
 
 ### Backend (Servicio API REST)
-- **Persistencia SQLite:** Genera automáticamente el archivo de base de datos `finanzas.db` y la tabla `transactions` en el inicio del servidor si no existen.
-- **Gestión de Transacciones:** Endpoints listos para listar, crear y eliminar registros financieros de manera ágil.
-- **Validaciones Integradas:** Validación de campos obligatorios en el servidor para asegurar la calidad de la información ingresada.
+- **Persistencia SQLite:** Crea la base de datos `backend/finanzas.db` y la tabla `transactions` automáticamente.
+- **Operaciones CRUD:** Endpoints para listar, registrar y eliminar registros financieros de manera ágil.
+- **Validación Integrada:** Comprobación rigurosa de campos requeridos.
 
 ---
 
 ## 📁 Estructura del Proyecto
 
-La estructura principal del repositorio se divide en los siguientes módulos:
+El repositorio cuenta con la siguiente estructura modular:
 
 - **Módulo Backend:** [backend/](file:///home/ved/projects/planificador_presupuestario/backend)
   - Servidor y controladores: [backend/src/index.ts](file:///home/ved/projects/planificador_presupuestario/backend/src/index.ts)
   - Configuración e inicialización de BD: [backend/src/config/db.ts](file:///home/ved/projects/planificador_presupuestario/backend/src/config/db.ts)
-  - Configuración de dependencias: [backend/package.json](file:///home/ved/projects/planificador_presupuestario/backend/package.json)
 - **Módulo Frontend:** [frontend/](file:///home/ved/projects/planificador_presupuestario/frontend)
+  - Modales del Sistema: [frontend/src/components/Modals.tsx](file:///home/ved/projects/planificador_presupuestario/frontend/src/components/Modals.tsx)
+  - Dashboard y analíticas: [frontend/src/components/Dashboard.tsx](file:///home/ved/projects/planificador_presupuestario/frontend/src/components/Dashboard.tsx)
+  - Tabla de registros: [frontend/src/components/TransactionTable.tsx](file:///home/ved/projects/planificador_presupuestario/frontend/src/components/TransactionTable.tsx)
   - Componente principal: [frontend/src/App.tsx](file:///home/ved/projects/planificador_presupuestario/frontend/src/App.tsx)
-  - Configuración de estilos y Tailwind: [frontend/src/index.css](file:///home/ved/projects/planificador_presupuestario/frontend/src/index.css)
-  - Configuración de Vite y Bundler: [frontend/vite.config.ts](file:///home/ved/projects/planificador_presupuestario/frontend/vite.config.ts)
-  - Configuración de dependencias: [frontend/package.json](file:///home/ved/projects/planificador_presupuestario/frontend/package.json)
+  - Definición de tipos: [frontend/src/types.ts](file:///home/ved/projects/planificador_presupuestario/frontend/src/types.ts)
 
 ```text
 planificador_presupuestario/
@@ -63,132 +67,119 @@ planificador_presupuestario/
 │   │   │   └── db.ts         # Configuración y esquema de la BD SQLite
 │   │   └── index.ts          # Servidor principal y definición de Endpoints
 │   ├── package.json
-│   ├── pnpm-lock.yaml
-│   └── tsconfig.json
+│   ├── tsconfig.json
+│   └── finanzas.db           # SQLite DB (generado automáticamente)
 ├── frontend/                 # Aplicación Cliente React + Vite
 │   ├── src/
-│   │   ├── assets/           # Recursos visuales y logos
-│   │   ├── App.tsx           # Componente principal de la interfaz
-│   │   ├── index.css         # Configuración y estilos CSS globales con Tailwind
-│   │   └── main.tsx          # Punto de entrada de la aplicación React
+│   │   ├── components/       # Componentes React Modulares
+│   │   │   ├── Dashboard.tsx # Paneles gráficos de analítica
+│   │   │   ├── Modals.tsx    # Modal de transacciones y configuración
+│   │   │   └── TransactionTable.tsx # Listado de transacciones
+│   │   ├── hooks/
+│   │   │   └── useTransactions.ts # Custom Hook para interactuar con la API
+│   │   ├── App.tsx           # Layout principal y estados de vista
+│   │   ├── index.css         # Configuración global de estilos
+│   │   ├── types.ts          # Tipos y contratos del dominio
+│   │   └── main.tsx          # Entrada de la app
 │   ├── package.json
-│   ├── pnpm-lock.yaml
-│   └── vite.config.ts        # Configuración de Vite con React Compiler y Tailwind
+│   └── vite.config.ts
 └── README.md                 # Este archivo de documentación
 ```
 
 ---
 
-## ⚡ Guía de Instalación y Configuración (Desarrollo)
+## ⚡ Guía de Instalación y Configuración
 
 ### Requisitos Previos
-Asegúrate de tener instalado en tu sistema:
-- **Node.js** (versión 18 o superior recomendada)
-- **pnpm** (gestor de paquetes preferido en el proyecto)
+- **Node.js** (v18 o superior)
+- **pnpm** (gestor recomendado)
 
 ---
 
 ### Paso 1: Levantar el Backend 🔌
 
-1. Navega al directorio del backend:
+1. Ingresa a la carpeta del backend:
    ```bash
    cd backend
    ```
-2. Instala las dependencias necesarias:
+2. Instala dependencias:
    ```bash
    pnpm install
    ```
-3. Inicia el servidor en modo desarrollo:
+3. Ejecuta en modo desarrollo:
    ```bash
    pnpm dev
    ```
-   *El servidor se ejecutará en **http://localhost:3001** y creará automáticamente el archivo de base de datos `backend/finanzas.db`.*
+   *Servidor corriendo en **http://localhost:3001**.*
 
 ---
 
 ### Paso 2: Levantar el Frontend 💻
 
-1. Abre una nueva terminal en la raíz del proyecto y navega al directorio del frontend:
+1. Entra a la carpeta del frontend:
    ```bash
    cd frontend
    ```
-2. Instala las dependencias necesarias:
+2. Instala dependencias:
    ```bash
    pnpm install
    ```
-3. Inicia la aplicación en modo desarrollo:
+3. Ejecuta la aplicación:
    ```bash
    pnpm dev
    ```
-   *La aplicación se ejecutará por defecto en **http://localhost:5173**.*
+   *Aplicación disponible en **http://localhost:5173**.*
 
 ---
 
 ## 🗄️ Modelo de Datos (Base de Datos)
 
-La base de datos SQLite contiene la tabla `transactions` con la siguiente estructura:
+La base de datos SQLite contiene la tabla `transactions` con la siguiente estructura adaptada a un entorno multimoneda:
 
 | Campo | Tipo | Descripción |
 | :--- | :--- | :--- |
 | `id` | `INTEGER` | Clave primaria autoincremental |
-| `type` | `TEXT` | Tipo de transacción: `'Income'` (Ingreso), `'Needs'` (Necesidades/Gastos Obligatorios), `'Wants'` (Deseos/Gastos Opcionales) |
-| `category` | `TEXT` | Categoría (ej. `'Business'`, `'Rent'`, `'Dining out'`) |
-| `date` | `TEXT` | Fecha de la transacción en formato `YYYY-MM-DD` (opcional, para transacciones puntuales) |
-| `frequency` | `TEXT` | Frecuencia de la transacción: `'Every Month'`, `'Every Week'`, `'Once'` |
-| `term` | `TEXT` | Año de vigencia (ej. `'2024'`, `'2026'`) |
-| `amount` | `REAL` | Monto de la transacción (Numérico decimal) |
-| `notes` | `TEXT` | Comentarios o detalles adicionales (opcional) |
+| `mode` | `TEXT` | Modo de visualización: `'planning'` (Presupuesto) o `'actual'` (Libro diario real) |
+| `type` | `TEXT` | Tipo: `'Income'` (Ingreso), `'Needs'` (Necesidades/Obligatorios), `'Wants'` (Deseos/Ocio) |
+| `category` | `TEXT` | Categoría/Concepto (ej. `'Alquiler'`, `'Salario'`, `'Supermercado'`) |
+| `date` | `TEXT` | Fecha del registro en formato `YYYY-MM-DD` |
+| `frequency` | `TEXT` | Periodicidad: `'Every Month'`, `'Every Week'`, `'Once'` |
+| `amount_stable` | `REAL` | Monto base de referencia de la app en Moneda Fuerte (USD) |
+| `amount_local` | `REAL` | Monto en Moneda Local inflacionaria (opcional) |
+| `currency` | `TEXT` | Moneda original del registro: `'USD'` o `'LOCAL'` |
+| `exchange_rate` | `REAL` | Tasa de cambio del día (opcional) |
+| `notes` | `TEXT` | Comentarios adicionales |
 
 ---
 
 ## 📡 Detalle de la API (Endpoints)
 
-El servidor backend expone los siguientes endpoints HTTP en `http://localhost:3001`:
-
 ### 1. Obtener todas las transacciones
 - **Método:** `GET`
 - **Ruta:** `/api/transactions`
-- **Respuesta exitosa (`200 OK`):**
-  ```json
-  [
-    {
-      "id": 1,
-      "type": "Income",
-      "category": "Salary",
-      "date": "2026-07-01",
-      "frequency": "Every Month",
-      "term": "2026",
-      "amount": 2500.0,
-      "notes": "Nómina mensual principal"
-    }
-  ]
-  ```
+- **Respuesta (`200 OK`):** Lista completa de transacciones.
 
-### 2. Crear una nueva transacción
+### 2. Registrar transacción
 - **Método:** `POST`
-- **Ruta:** `api/transaction` *(Nota: la definición actual en el código no contiene el prefijo `/` inicial en Express)*
-- **Cuerpo de la petición (JSON):**
+- **Ruta:** `/api/transactions`
+- **Cuerpo (JSON):**
   ```json
   {
+    "mode": "actual",
     "type": "Needs",
-    "category": "Rent",
-    "date": "2026-07-05",
-    "frequency": "Every Month",
-    "term": "2026",
-    "amount": 800.0,
-    "notes": "Pago mensual del alquiler"
+    "category": "Supermercado",
+    "date": "2026-07-10",
+    "frequency": "Once",
+    "amount_stable": 35.5,
+    "amount_local": 1615.25,
+    "currency": "LOCAL",
+    "exchange_rate": 45.5,
+    "notes": "Compra semanal"
   }
   ```
-- **Campos Obligatorios:** `type`, `category`, `frequency`, `amount`
-- **Respuesta exitosa (`201 Created`):** Devuelve la transacción creada incluyendo su nuevo `id`.
+- **Campos Obligatorios:** `mode`, `type`, `category`, `frequency`, `amount_stable`, `currency`.
 
-### 3. Eliminar una transacción
+### 3. Eliminar transacción
 - **Método:** `DELETE`
 - **Ruta:** `/api/transactions/:id`
-- **Respuesta exitosa (`200 OK`):**
-  ```json
-  {
-    "message": "Transacción eliminada con éxito."
-  }
-  ```
-- **Error (`404 Not Found`):** Si el ID de transacción no existe en la base de datos.
+- **Respuesta (`200 OK`):** Mensaje de confirmación.
