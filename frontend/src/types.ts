@@ -18,3 +18,10 @@ export interface BudgetSummary {
     wants: number;
     savings: number;
 }
+
+export interface AppSettings {
+    categories: string[];
+    currencies: string[];
+    defaultCurrency: 'USD' | 'LOCAL';
+    defaultExchangeRate: number;
+}
