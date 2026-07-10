@@ -21,7 +21,7 @@ app.get('/api/transactions', (req, res) => {
 });
 
 app.post('/api/transactions', (req, res) => {
-    const { type, category, date, frequency, term, amount, notes } = req.body;
+    const { type, category, date, frequency, term, amount, notes, mode, amount_stable, amount_local, currency, exchange_rate } = req.body;
 
     if (!type || !category || !frequency || amount === undefined) {
         return res.status(400).json({
@@ -30,8 +30,8 @@ app.post('/api/transactions', (req, res) => {
     }
     try {
         const insert = db.prepare(`
-            INSERT INTO transactions (type, category, date, frequency, term, amount, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO transactions (type, category, date, frequency, term, amount, notes, mode, amount_stable, amount_local, currency, exchange_rate)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         const result = insert.run(
             type,
@@ -39,7 +39,11 @@ app.post('/api/transactions', (req, res) => {
             date || null,
             frequency,
             term || null,
-            amount,
+            mode,
+            amount_stable,
+            amount_local,
+            currency,
+            exchange_rate,
             notes || null
         );
 
@@ -50,7 +54,11 @@ app.post('/api/transactions', (req, res) => {
             date,
             frequency,
             term,
-            amount,
+            mode,
+            amount_stable,
+            amount_local,
+            currency,
+            exchange_rate,
             notes
         });
     } catch (error) {

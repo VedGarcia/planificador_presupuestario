@@ -7,13 +7,16 @@ const db = new Database(dbPath, { verbose: console.log });
 db.exec(`
   CREATE TABLE IF NOT EXISTS transactions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    type TEXT NOT NULL,       -- 'Income', 'Needs', 'Wants'
-    category TEXT NOT NULL,   -- 'Business', 'Rent', 'Dining out', etc.
-    date TEXT,                -- Formato YYYY-MM-DD (para gastos puntuales)
-    frequency TEXT NOT NULL,  -- 'Every Month', 'Every Week', 'Once'
-    term TEXT,                -- '2024', '2026', etc. (Año de vigencia)
-    amount REAL NOT NULL,     -- Monto de la transacción
-    notes TEXT                -- Comentarios o detalles adicionales
+    mode TEXT NOT NULL,          -- 'planning' (Presupuesto) o 'actual' (Libro diario real)
+    type TEXT NOT NULL,          -- 'Income', 'Needs', 'Wants'
+    category TEXT NOT NULL,      -- Ej: Alquiler, Salario, Delivery
+    date TEXT NOT NULL,          -- YYYY-MM-DD
+    frequency TEXT NOT NULL,     -- 'Every Month', 'Every Week', 'Once'
+    amount_stable REAL NOT NULL, -- Monto en Moneda Fuerte (USD) -> Base de la app
+    amount_local REAL,           -- Monto en Moneda Frágil (Moneda Local)
+    currency TEXT NOT NULL,      -- Moneda seleccionada en el registro: 'USD' o 'LOCAL'
+    exchange_rate REAL,          -- Tasa de cambio del día de la operación
+    notes TEXT
   )
 `);
 
