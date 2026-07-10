@@ -56,7 +56,7 @@ export const useTransactions = () => {
         let wants = 0;
 
         transactions.forEach(t => {
-            const monthlyAmount = t.frequency === 'Every Week' ? t.amount * 4 : t.amount;
+            const monthlyAmount = t.frequency === 'Every Week' ? t.amount_stable * 4 : t.amount_stable;
 
             if (t.type === 'Income') income += monthlyAmount;
             if (t.type === 'Needs') needs += monthlyAmount;

@@ -2,292 +2,322 @@
 import React, { useState, useMemo } from 'react';
 import { useTransactions } from './hooks/useTransactions';
 import type { Transaction } from './types';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { PlusCircle, Trash2, Wallet, ShieldAlert, Heart, PiggyBank, Calendar, X } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { PlusCircle, Trash2, Wallet, ShieldAlert, Heart, PiggyBank, Calendar, X, RefreshCw, Layers, BookOpen } from 'lucide-react';
 
-type PeriodType = 'monthly' | 'quarterly' | 'semiannually' | 'annually';
+type ViewMode = 'planning' | 'actual';
 
 export default function App() {
   const { transactions, loading, addTransaction, deleteTransaction } = useTransactions();
 
-  // Estados de control de la UI
+  // Controles de Vista
+  const [viewMode, setViewMode] = useState<ViewMode>('planning');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [period, setPeriod] = useState<PeriodType>('monthly');
 
-  // Estado para el formulario del modal
-  const [formData, setFormData] = useState<Omit<Transaction, 'id'>>({
-    type: 'Needs',
+  // Estado del Formulario
+  const [formData, setFormData] = useState({
+    type: 'Needs' as 'Income' | 'Needs' | 'Wants',
     category: '',
-    frequency: 'Every Month',
-    amount: 0,
+    frequency: 'Once' as 'Every Month' | 'Every Week' | 'Once',
+    currency: 'USD' as 'USD' | 'LOCAL',
+    exchange_rate: 45.5, // Tasa base sugerida del día
+    inputAmount: 0,      // Lo que escribe el usuario en la interfaz
     notes: '',
-    term: '2026',
-    date: new Date().toISOString().split('T')[0] // Por defecto fecha de hoy YYYY-MM-DD
+    date: new Date().toISOString().split('T')[0]
   });
 
+  // Convertidor de Moneda Dinámico en el Modal
+  const conversionCalculated = useMemo(() => {
+    const rate = formData.exchange_rate || 1;
+    const input = formData.inputAmount || 0;
+
+    if (formData.currency === 'USD') {
+      return { stable: input, local: input * rate };
+    } else {
+      return { stable: input / rate, local: input };
+    }
+  }, [formData.inputAmount, formData.currency, formData.exchange_rate]);
+
+  // Manejo del Envío del Formulario
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.category || formData.amount <= 0) return;
+    if (!formData.category || formData.inputAmount <= 0) return;
 
-    addTransaction(formData as Transaction);
+    const newTransaction: Transaction = {
+      mode: viewMode,
+      type: formData.type,
+      category: formData.category,
+      frequency: viewMode === 'planning' ? formData.frequency : 'Once', // Diario siempre es puntual
+      date: formData.date,
+      currency: formData.currency,
+      exchange_rate: formData.exchange_rate,
+      amount_stable: conversionCalculated.stable,
+      amount_local: conversionCalculated.local,
+      notes: formData.notes
+    };
 
-    // Resetear formulario y cerrar modal
-    setFormData({
-      ...formData,
-      category: '',
-      amount: 0,
-      notes: '',
-      date: new Date().toISOString().split('T')[0]
-    });
+    addTransaction(newTransaction);
+    setFormData({ ...formData, category: '', inputAmount: 0, notes: '' });
     setIsModalOpen(false);
   };
 
-  // --- LÓGICA DE FILTRADO Y PROYECCIÓN TEMPORAL ---
-  const { summary, periodLabel, multiplier } = useMemo(() => {
-    let mult = 1;
-    let label = 'Mensual';
-
-    if (period === 'quarterly') { mult = 3; label = 'Trimestral'; }
-    if (period === 'semiannually') { mult = 6; label = 'Semestral'; }
-    if (period === 'annually') { mult = 12; label = 'Anual'; }
-
-    let income = 0;
-    let needs = 0;
-    let wants = 0;
+  // --- PROCESAMIENTO DE MÉTRICAS COMPARTIDAS (Mesa de Control) ---
+  const financialData = useMemo(() => {
+    const plan = { income: 0, needs: 0, wants: 0, savings: 0 };
+    const real = { income: 0, needs: 0, wants: 0, savings: 0 };
 
     transactions.forEach(t => {
-      let baseMonthlyAmount = t.amount;
+      // Normalización a proyección mensual estándar
+      let monthlyStable = t.amount_stable;
+      if (t.frequency === 'Every Week') monthlyStable = t.amount_stable * 4;
 
-      // Normalizar a base mensual primero según la frecuencia
-      if (t.frequency === 'Every Week') {
-        baseMonthlyAmount = t.amount * 4;
-      } else if (t.frequency === 'Once') {
-        // Si es un gasto único, asumimos que impacta el mes corriente
-        // Para bloques más grandes, simplemente se suma el monto base una vez
-        baseMonthlyAmount = t.amount / mult;
+      if (t.mode === 'planning') {
+        if (t.type === 'Income') plan.income += monthlyStable;
+        if (t.type === 'Needs') plan.needs += monthlyStable;
+        if (t.type === 'Wants') plan.wants += monthlyStable;
+      } else {
+        if (t.type === 'Income') real.income += monthlyStable;
+        if (t.type === 'Needs') real.needs += monthlyStable;
+        if (t.type === 'Wants') real.wants += monthlyStable;
       }
-
-      // Proyectar el monto total según el multiplicador del periodo seleccionado
-      const projectedAmount = baseMonthlyAmount * mult;
-
-      if (t.type === 'Income') income += projectedAmount;
-      if (t.type === 'Needs') needs += projectedAmount;
-      if (t.type === 'Wants') wants += projectedAmount;
     });
 
-    const savings = income - (needs + wants);
+    plan.savings = plan.income - (plan.needs + plan.wants);
+    real.savings = real.income - (real.needs + real.wants);
 
-    return {
-      summary: { income, needs, wants, savings },
-      periodLabel: label,
-      multiplier: mult
-    };
-  }, [transactions, period]);
+    return { plan, real };
+  }, [transactions]);
 
-  // Data para el gráfico dinámico
-  const chartData = [
-    { name: `Needs (${periodLabel})`, value: summary.needs, color: '#3B82F6' },
-    { name: `Wants (${periodLabel})`, value: summary.wants, color: '#EC4899' },
-    { name: `Savings (${periodLabel})`, value: summary.savings > 0 ? summary.savings : 0, color: '#10B981' }
+  // Selección de datos a mostrar según el Suiche
+  const currentSummary = viewMode === 'planning' ? financialData.plan : financialData.real;
+
+  const comparisonChartData = [
+    { name: 'Ingresos', Planificado: financialData.plan.income, Real: financialData.real.income },
+    { name: 'Needs', Planificado: financialData.plan.needs, Real: financialData.real.needs },
+    { name: 'Wants', Planificado: financialData.plan.wants, Real: financialData.real.wants },
+    { name: 'Ahorros', Planificado: financialData.plan.savings, Real: financialData.real.savings }
   ];
 
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Cargando aplicación local...</div>;
-  }
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Cargando base de datos multimoneda...</div>;
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 p-6 font-sans">
 
-      {/* HEADER */}
-      <header className="max-w-7xl mx-auto mb-8 border-b border-slate-800 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      {/* HEADER & CONTROLES BI-MODALES */}
+      <header className="max-w-7xl mx-auto mb-8 border-b border-slate-800 pb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <Wallet className="text-emerald-400" /> Sistema de Control Financiero
+            <Layers className="text-emerald-400" /> Control Financiero Corporativo/Personal
           </h1>
-          <p className="text-slate-400 text-sm mt-1">Análisis de presupuestos bajo la regla presupuestaria 50/30/20.</p>
+          <p className="text-slate-400 text-sm mt-1">Estrategia de blindaje inflacionario y conversión multimoneda.</p>
         </div>
 
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all transform active:scale-95 shadow-lg shadow-emerald-600/20"
-        >
-          <PlusCircle size={20} /> Nueva Transacción
-        </button>
+        <div className="flex items-center gap-4 self-end md:self-auto">
+          {/* SUICHE DE VISTA */}
+          <div className="bg-slate-800 p-1 rounded-xl border border-slate-700 flex">
+            <button onClick={() => setViewMode('planning')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${viewMode === 'planning' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}>
+              <Layers size={14} /> Planificación (USD)
+            </button>
+            <button onClick={() => setViewMode('actual')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${viewMode === 'actual' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}>
+              <BookOpen size={14} /> Diario Ejecutado
+            </button>
+          </div>
+
+          <button onClick={() => setIsModalOpen(true)} className="bg-slate-100 hover:bg-white text-slate-900 font-semibold px-4 py-2 rounded-xl flex items-center gap-2 text-xs transition-transform active:scale-95">
+            <PlusCircle size={16} /> Registrar {viewMode === 'planning' ? 'Meta' : 'Gasto Diario'}
+          </button>
+        </div>
       </header>
 
-      <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <main className="max-w-7xl mx-auto space-y-8">
 
-        {/* FILTROS DE VISTA (PANELES SUPERIORES) */}
-        <div className="lg:col-span-3 flex bg-slate-800 p-1.5 rounded-xl border border-slate-700/60 max-w-md">
-          {(['monthly', 'quarterly', 'semiannually', 'annually'] as PeriodType[]).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`flex-1 text-center py-2 text-xs font-semibold rounded-lg capitalize transition-all ${period === p ? 'bg-slate-900 text-emerald-400 shadow' : 'text-slate-400 hover:text-slate-200'
-                }`}
-            >
-              {p === 'monthly' ? 'Mensual' : p === 'quarterly' ? 'Trimestral' : p === 'semiannually' ? 'Semestral' : 'Anual'}
-            </button>
-          ))}
-        </div>
-
-        {/* TARJETAS DE MÉTRICAS DINÁMICAS */}
-        <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-4 gap-4">
+        {/* INDICADORES FINANCIEROS */}
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <div className="bg-slate-800 p-5 rounded-xl border border-slate-700/50">
-            <div className="flex justify-between items-center text-slate-400 mb-2"><span>Ingreso {periodLabel}</span><Wallet size={20} /></div>
-            <p className="text-2xl font-bold text-white">${summary.income.toFixed(2)}</p>
+            <span className="text-xs text-slate-400 block mb-1">Ingresos Totales ({viewMode === 'planning' ? 'Presupuesto' : 'Ejecutado'})</span>
+            <p className="text-2xl font-bold text-white">${currentSummary.income.toFixed(2)}</p>
           </div>
           <div className="bg-slate-800 p-5 rounded-xl border border-slate-700/50">
-            <div className="flex justify-between items-center text-slate-400 mb-2"><span>Needs (50% Sugerido)</span><ShieldAlert size={20} className="text-blue-400" /></div>
-            <p className="text-2xl font-bold text-blue-400">${summary.needs.toFixed(2)}</p>
-            <span className="text-xs text-slate-500">Límite: ${(summary.income * 0.5).toFixed(2)}</span>
+            <span className="text-xs text-slate-400 block mb-1">Needs (Gastos Vitales)</span>
+            <p className="text-2xl font-bold text-blue-400">${currentSummary.needs.toFixed(2)}</p>
           </div>
           <div className="bg-slate-800 p-5 rounded-xl border border-slate-700/50">
-            <div className="flex justify-between items-center text-slate-400 mb-2"><span>Wants (30% Sugerido)</span><Heart size={20} className="text-pink-400" /></div>
-            <p className="text-2xl font-bold text-pink-400">${summary.wants.toFixed(2)}</p>
-            <span className="text-xs text-slate-500">Límite: ${(summary.income * 0.3).toFixed(2)}</span>
+            <span className="text-xs text-slate-400 block mb-1">Wants (Deseos/Variables)</span>
+            <p className="text-2xl font-bold text-pink-400">${currentSummary.wants.toFixed(2)}</p>
           </div>
           <div className="bg-slate-800 p-5 rounded-xl border border-slate-700/50">
-            <div className="flex justify-between items-center text-slate-400 mb-2"><span>Savings (20% Mínimo)</span><PiggyBank size={20} className="text-emerald-400" /></div>
-            <p className="text-2xl font-bold text-emerald-400">${summary.savings.toFixed(2)}</p>
-            <span className="text-xs text-slate-500">Meta: ${(summary.income * 0.2).toFixed(2)}</span>
+            <span className="text-xs text-slate-400 block mb-1">Excedente de Liquidez / Ahorro</span>
+            <p className={`text-2xl font-bold ${currentSummary.savings >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              ${currentSummary.savings.toFixed(2)}
+            </p>
           </div>
         </div>
 
-        {/* GRÁFICO DE DONA */}
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700/50 flex flex-col items-center justify-center">
-          <h2 className="text-lg font-semibold text-white mb-2 self-start">Distribución {periodLabel} Real</h2>
-          <div className="w-full h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={chartData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ backgroundColor: '#1E293B', borderColor: '#475569', color: '#fff' }} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+        {/* GRÁFICOS COMPULSARADOS */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Dashboard de Contraste Presupuestario */}
+          <div className="bg-slate-800 p-6 rounded-xl border border-slate-700/50 lg:col-span-2">
+            <h3 className="text-base font-bold text-white mb-4">Evaluación de Desviación: Planificado vs. Real Diario</h3>
+            <div className="w-full h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={comparisonChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} />
+                  <YAxis stroke="#94a3b8" fontSize={12} />
+                  <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#475569' }} />
+                  <Legend />
+                  <Bar dataKey="Planificado" fill="#475569" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Real" fill="#10b981" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Estado de Salud de la Ejecución */}
+          <div className="bg-slate-800 p-6 rounded-xl border border-slate-700/50 flex flex-col justify-between">
+            <div>
+              <h3 className="text-base font-bold text-white mb-2">Diagnóstico de Liquidez</h3>
+              <p className="text-xs text-slate-400">¿Estás ejecutando tus ingresos de manera eficiente antes de la devaluación?</p>
+            </div>
+            <div className="py-4 space-y-3">
+              <div>
+                <div className="flex justify-between text-xs mb-1"><span>Ejecución del Ingreso</span><span className="font-semibold">{((financialData.real.income / (financialData.plan.income || 1)) * 100).toFixed(0)}%</span></div>
+                <div className="w-full bg-slate-700 h-2 rounded-full overflow-hidden"><div className="bg-emerald-500 h-full" style={{ width: `${Math.min((financialData.real.income / (financialData.plan.income || 1)) * 100, 100)}%` }}></div></div>
+              </div>
+              <div>
+                <div className="flex justify-between text-xs mb-1"><span>Consumo de Presupuesto Needs</span><span className="font-semibold">{((financialData.real.needs / (financialData.plan.needs || 1)) * 100).toFixed(0)}%</span></div>
+                <div className="w-full bg-slate-700 h-2 rounded-full overflow-hidden"><div className="bg-blue-500 h-full" style={{ width: `${Math.min((financialData.real.needs / (financialData.plan.needs || 1)) * 100, 100)}%` }}></div></div>
+              </div>
+            </div>
+            <div className="text-[11px] bg-slate-900/60 p-3 rounded-lg border border-slate-700 text-slate-400">
+              ⚡ **Estrategia:** En vista diaria, los montos en moneda local se convierten instantáneamente a USD indexados usando el histórico registrado para evitar distorsiones inflacionarias.
+            </div>
           </div>
         </div>
 
-        {/* HISTORIAL COMPLETO */}
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700/50 lg:col-span-2">
-          <h2 className="text-lg font-semibold text-white mb-4">Historial General de Registros</h2>
+        {/* TABLA DE AUDITORÍA */}
+        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700/50">
+          <h3 className="text-base font-bold text-white mb-4">Registros en Vista: {viewMode === 'planning' ? 'Matriz de Planificación' : 'Libro de Caja Diario'}</h3>
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left">
               <thead>
-                <tr className="border-b border-slate-700 text-slate-400 text-sm">
+                <tr className="border-b border-slate-700 text-slate-400 text-xs uppercase tracking-wider">
+                  <th className="pb-3">Detalle</th>
                   <th className="pb-3">Tipo</th>
-                  <th className="pb-3">Categoría</th>
-                  <th className="pb-3">Frecuencia</th>
-                  <th className="pb-3 text-right">Monto Base</th>
-                  <th className="pb-3 text-right">Impacto {periodLabel}</th>
-                  <th className="pb-3 text-center">Acciones</th>
+                  {viewMode === 'planning' && <th className="pb-3">Frecuencia</th>}
+                  <th className="pb-3 text-right">Monto (USD)</th>
+                  {viewMode === 'actual' && <th className="pb-3 text-right">Monto Moneda Local</th>}
+                  {viewMode === 'actual' && <th className="pb-3 text-right">Tasa Ref.</th>}
+                  <th className="pb-3 text-center">Acción</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 text-sm">
-                {transactions.map(t => {
-                  let baseMonthly = t.frequency === 'Every Week' ? t.amount * 4 : t.amount;
-                  if (t.frequency === 'Once') baseMonthly = t.amount / multiplier;
-                  const currentImpact = baseMonthly * multiplier;
-
-                  return (
-                    <tr key={t.id} className="hover:bg-slate-700/20 transition-colors">
-                      <td className="py-3">
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${t.type === 'Income' ? 'bg-emerald-500/10 text-emerald-400' :
-                          t.type === 'Needs' ? 'bg-blue-500/10 text-blue-400' : 'bg-pink-500/10 text-pink-400'
-                          }`}>
-                          {t.type}
-                        </span>
-                      </td>
-                      <td className="py-3 font-medium text-white">
-                        {t.category}
-                        {t.date && <span className="block text-[11px] text-slate-500 font-normal">{t.date}</span>}
-                      </td>
-                      <td className="py-3 text-slate-400 text-xs">{t.frequency}</td>
-                      <td className="py-3 text-right font-mono text-slate-400">${t.amount.toFixed(2)}</td>
-                      <td className="py-3 text-right font-mono text-white font-semibold">${currentImpact.toFixed(2)}</td>
-                      <td className="py-3 text-center">
-                        <button onClick={() => t.id && deleteTransaction(t.id)} className="text-slate-500 hover:text-red-400 transition-colors p-1">
-                          <Trash2 size={15} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {transactions.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-500">Ningún registro activo en la base de datos local.</td>
+                {transactions.filter(t => t.mode === viewMode).map(t => (
+                  <tr key={t.id} className="hover:bg-slate-700/10">
+                    <td className="py-3">
+                      <span className="font-semibold text-white block">{t.category}</span>
+                      <span className="text-xs text-slate-500">{t.date} {t.notes ? `• ${t.notes}` : ''}</span>
+                    </td>
+                    <td className="py-3">
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${t.type === 'Income' ? 'bg-emerald-500/10 text-emerald-400' : t.type === 'Needs' ? 'bg-blue-500/10 text-blue-400' : 'bg-pink-500/10 text-pink-400'}`}>{t.type}</span>
+                    </td>
+                    {viewMode === 'planning' && <td className="py-3 text-slate-400 text-xs">{t.frequency}</td>}
+                    <td className="py-3 text-right font-mono font-medium text-white">${t.amount_stable.toFixed(2)}</td>
+                    {viewMode === 'actual' && <td className="py-3 text-right font-mono text-slate-400">{t.amount_local ? `${t.amount_local.toLocaleString(undefined, { minimumFractionDigits: 2 })} Bs/Arg` : '-'}</td>}
+                    {viewMode === 'actual' && <td className="py-3 text-right font-mono text-slate-500 text-xs">{t.exchange_rate ? `x${t.exchange_rate}` : '-'}</td>}
+                    <td className="py-3 text-center">
+                      <button onClick={() => t.id && deleteTransaction(t.id)} className="text-slate-500 hover:text-red-400 p-1"><Trash2 size={14} /></button>
+                    </td>
                   </tr>
-                )}
+                ))}
               </tbody>
             </table>
           </div>
         </div>
       </main>
 
-      {/* --- COMPONENTE MODAL INTERACTIVO --- */}
+      {/* MODAL INTELIGENTE MULTIMONEDA */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-opacity">
-          <div className="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl transform scale-100 transition-transform">
-            <div className="px-6 py-4 bg-slate-750 border-b border-slate-700 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <Calendar size={20} className="text-emerald-400" /> Registrar Operación
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl">
+            <div className="px-6 py-4 border-b border-slate-700 flex justify-between items-center bg-slate-800">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                Registrar en {viewMode === 'planning' ? 'Planificación' : 'Libro Diario'}
               </h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">
-                <X size={20} />
-              </button>
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white"><X size={18} /></button>
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Tipo de Registro</label>
-                <select className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value as any })}>
-                  <option value="Income">Income (Ingreso)</option>
-                  <option value="Needs">Needs (Necesidades Básicas)</option>
-                  <option value="Wants">Wants (Deseos/Ocio)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Categoría</label>
-                <input type="text" placeholder="Ej: Alquiler, Internet, Compras" className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} required />
-              </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">Frecuencia</label>
-                  <select className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500" value={formData.frequency} onChange={e => setFormData({ ...formData, frequency: e.target.value as any })}>
-                    <option value="Every Month">Mensual</option>
-                    <option value="Every Week">Semanal</option>
-                    <option value="Once">Una Sola Vez</option>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1">Flujo</label>
+                  <select className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-sm" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value as any })}>
+                    <option value="Income">Ingreso (+)</option>
+                    <option value="Needs">Needs / Vitales (-)</option>
+                    <option value="Wants">Wants / Deseos (-)</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">Monto Imputable ($)</label>
-                  <input type="number" step="0.01" className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono" value={formData.amount || ''} onChange={e => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })} required />
+                  <label className="block text-xs font-semibold text-slate-400 mb-1">Fecha</label>
+                  <input type="date" className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-sm font-mono" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Fecha de Ejecución</label>
-                <input type="date" className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} required />
+                <label className="block text-xs font-semibold text-slate-400 mb-1">Concepto / Categoría</label>
+                <input type="text" placeholder="Ej: Pago de Proveedor, Supermercado" className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-sm text-white" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} required />
               </div>
+
+              {/* CONTROLES DE MONEDA (Solo visibles en Diario o si se desea calcular) */}
+              <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-700 space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1">Moneda Ejecutada</label>
+                    <select className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs font-bold text-emerald-400" value={formData.currency} onChange={e => setFormData({ ...formData, currency: e.target.value as any })}>
+                      <option value="USD">USD (Fuerte)</option>
+                      <option value="LOCAL">Moneda Local (Frágil)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1">Tasa de Cambio (Hoy)</label>
+                    <input type="number" step="0.01" className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs font-mono text-white" value={formData.exchange_rate} onChange={e => setFormData({ ...formData, exchange_rate: parseFloat(e.target.value) || 1 })} />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1">Monto Introducido</label>
+                  <div className="relative">
+                    <input type="number" step="0.01" placeholder="0.00" className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-base font-mono text-white" value={formData.inputAmount || ''} onChange={e => setFormData({ ...formData, inputAmount: parseFloat(e.target.value) || 0 })} required />
+                    <span className="absolute right-3 top-3 text-xs font-bold text-slate-500">{formData.currency}</span>
+                  </div>
+                </div>
+
+                {/* VISOR DE CONVERSIÓN EN TIEMPO REAL */}
+                <div className="flex justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800">
+                  <span>Equivalencia USD: <strong className="text-white">${conversionCalculated.stable.toFixed(2)}</strong></span>
+                  <span>Equivalencia Local: <strong className="text-white">{conversionCalculated.local.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong></span>
+                </div>
+              </div>
+
+              {viewMode === 'planning' && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1">Frecuencia de Proyección</label>
+                  <select className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-sm" value={formData.frequency} onChange={e => setFormData({ ...formData, frequency: e.target.value as any })}>
+                    <option value="Every Month">Mensual</option>
+                    <option value="Every Week">Semanal (Multiplica x4)</option>
+                    <option value="Once">Puntual</option>
+                  </select>
+                </div>
+              )}
 
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Notas Opcionales</label>
-                <input type="text" placeholder="Detalles de la transacción..." className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500" value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} />
+                <label className="block text-xs font-semibold text-slate-400 mb-1">Notas Adicionales</label>
+                <input type="text" placeholder="Comentarios..." className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-sm text-white" value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} />
               </div>
 
-              <div className="pt-2 flex gap-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="w-1/3 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium p-2.5 rounded-xl transition-colors">
-                  Cancelar
-                </button>
-                <button type="submit" className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium p-2.5 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-lg shadow-emerald-600/10">
-                  Guardar Registro
-                </button>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="w-1/3 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium p-2.5 rounded-xl text-sm">Cerrar</button>
+                <button type="submit" className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium p-2.5 rounded-xl text-sm flex items-center justify-center gap-2">💾 Guardar en SQLite</button>
               </div>
             </form>
           </div>

@@ -21,45 +21,43 @@ app.get('/api/transactions', (req, res) => {
 });
 
 app.post('/api/transactions', (req, res) => {
-    const { type, category, date, frequency, term, amount, notes, mode, amount_stable, amount_local, currency, exchange_rate } = req.body;
+    const { mode, type, category, date, frequency, amount_stable, amount_local, currency, exchange_rate, notes } = req.body;
 
-    if (!type || !category || !frequency || amount === undefined) {
+    if (!mode || !type || !category || !frequency || amount_stable === undefined || !currency) {
         return res.status(400).json({
-            error: 'Los campos type, category, frequency y amount son obligatorios.'
+            error: 'Los campos mode, type, category, frequency, amount_stable y currency son obligatorios.'
         });
     }
     try {
         const insert = db.prepare(`
-            INSERT INTO transactions (type, category, date, frequency, term, amount, notes, mode, amount_stable, amount_local, currency, exchange_rate)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO transactions (mode, type, category, date, frequency, amount_stable, amount_local, currency, exchange_rate, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         const result = insert.run(
+            mode,
             type,
             category,
-            date || null,
+            date || new Date().toISOString().split('T')[0],
             frequency,
-            term || null,
-            mode,
             amount_stable,
-            amount_local,
+            amount_local !== undefined && amount_local !== null ? amount_local : null,
             currency,
-            exchange_rate,
+            exchange_rate !== undefined && exchange_rate !== null ? exchange_rate : null,
             notes || null
         );
 
         res.status(201).json({
             id: result.lastInsertRowid,
+            mode,
             type,
             category,
-            date,
+            date: date || new Date().toISOString().split('T')[0],
             frequency,
-            term,
-            mode,
             amount_stable,
-            amount_local,
+            amount_local: amount_local !== undefined && amount_local !== null ? amount_local : null,
             currency,
-            exchange_rate,
-            notes
+            exchange_rate: exchange_rate !== undefined && exchange_rate !== null ? exchange_rate : null,
+            notes: notes || null
         });
     } catch (error) {
         res.status(500).json({ error: 'Error al insertar la transacción.' });
