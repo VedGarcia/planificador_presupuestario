@@ -59,8 +59,8 @@ export default function App() {
       {/* HEADER COMPACTO */}
       <header className="max-w-7xl mx-auto border-b border-slate-800 pb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-white flex items-center gap-2">🛡️ Control Multimoneda</h1>
-          <p className="text-slate-400 text-xs">Entorno modular optimizado contra devaluación.</p>
+          <h1 className="text-2xl font-extrabold text-white flex items-center gap-2">🛡️ Planificador presupuestario</h1>
+          <p className="text-slate-400 text-xs">Entorno modular de planificación y control financiero</p>
         </div>
 
         <div className="flex items-center gap-3 self-end md:self-auto">

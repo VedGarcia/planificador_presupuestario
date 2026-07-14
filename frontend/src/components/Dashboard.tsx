@@ -13,8 +13,8 @@ export function DashboardPanels({ viewMode, summary, planData, realData }: Panel
     // Estructura de datos para el gráfico comparativo de barras
     const barChartData = [
         { name: 'Ingresos', Planificado: planData.income, Real: realData.income },
-        { name: 'Needs', Planificado: planData.needs, Real: realData.needs },
-        { name: 'Wants', Planificado: planData.wants, Real: realData.wants },
+        { name: 'Necesidades', Planificado: planData.needs, Real: realData.needs },
+        { name: 'Gustos', Planificado: planData.wants, Real: realData.wants },
         { name: 'Ahorros', Planificado: planData.savings, Real: realData.savings }
     ];
 
@@ -27,11 +27,11 @@ export function DashboardPanels({ viewMode, summary, planData, realData }: Panel
                     <p className="text-2xl font-bold text-white">${summary.income.toFixed(2)}</p>
                 </div>
                 <div className="bg-slate-800 p-5 rounded-xl border border-slate-700/50">
-                    <span className="text-xs text-slate-400 block mb-1">Needs (Gastos Vitales)</span>
+                    <span className="text-xs text-slate-400 block mb-1">Necesidades (Gastos Vitales)</span>
                     <p className="text-2xl font-bold text-blue-400">${summary.needs.toFixed(2)}</p>
                 </div>
                 <div className="bg-slate-800 p-5 rounded-xl border border-slate-700/50">
-                    <span className="text-xs text-slate-400 block mb-1">Wants (Deseos / Ocio)</span>
+                    <span className="text-xs text-slate-400 block mb-1">Gustos (Deseos / Ocio)</span>
                     <p className="text-2xl font-bold text-pink-400">${summary.wants.toFixed(2)}</p>
                 </div>
                 <div className="bg-slate-800 p-5 rounded-xl border border-slate-700/50">
@@ -73,7 +73,7 @@ export function DashboardPanels({ viewMode, summary, planData, realData }: Panel
                             <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden"><div className="bg-emerald-500 h-full" style={{ width: `${Math.min((realData.income / (planData.income || 1)) * 100, 100)}%` }}></div></div>
                         </div>
                         <div>
-                            <div className="flex justify-between text-xs mb-1"><span>Consumo de Needs</span><span className="font-mono font-bold">{((realData.needs / (planData.needs || 1)) * 100).toFixed(0)}%</span></div>
+                            <div className="flex justify-between text-xs mb-1"><span>Consumo de Necesidades</span><span className="font-mono font-bold">{((realData.needs / (planData.needs || 1)) * 100).toFixed(0)}%</span></div>
                             <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden"><div className="bg-blue-500 h-full" style={{ width: `${Math.min((realData.needs / (planData.needs || 1)) * 100, 100)}%` }}></div></div>
                         </div>
                     </div>

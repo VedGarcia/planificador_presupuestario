@@ -3,6 +3,24 @@ import { useState, useMemo, useEffect } from 'react';
 import type { Transaction, AppSettings } from '../types';
 import { X, Calendar, Settings as SettingsIcon } from 'lucide-react';
 
+const getTodayDDMMAAAA = () => {
+    const d = new Date();
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+};
+
+const convertDDMMAAAAToYYYYMMDD = (dateStr: string): string => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+        const [day, month, year] = parts;
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    return dateStr;
+};
+
 // --- MODAL DE TRANSACCIONES ---
 interface TxModalProps {
     isOpen: boolean;
@@ -21,24 +39,21 @@ export function TransactionModal({ isOpen, onClose, mode, settings, onSave }: Tx
         exchange_rate: settings.defaultExchangeRate,
         inputAmount: 0,
         notes: '',
-        date: new Date().toISOString().split('T')[0]
+        date: getTodayDDMMAAAA()
     });
 
     useEffect(() => {
-        if (mode === 'planning') {
-            setFormData(f => ({
-                ...f,
-                currency: 'STRONG', // Planificación siempre obligada a Moneda Fuerte
-                frequency: 'Every Month',
-                category: settings.categories[0] || ''
-            }));
-        } else {
-            setFormData(f => ({
-                ...f,
-                currency: settings.defaultCurrency,
-                frequency: 'Once',
-                category: settings.categories[0] || ''
-            }));
+        if (isOpen) {
+            setFormData({
+                type: 'Needs',
+                category: settings.categories[0] || '',
+                frequency: mode === 'planning' ? 'Every Month' : 'Once',
+                currency: mode === 'planning' ? 'STRONG' : settings.defaultCurrency,
+                exchange_rate: settings.defaultExchangeRate,
+                inputAmount: 0,
+                notes: '',
+                date: getTodayDDMMAAAA()
+            });
         }
     }, [mode, settings, isOpen]);
 
@@ -70,12 +85,22 @@ export function TransactionModal({ isOpen, onClose, mode, settings, onSave }: Tx
                         type: formData.type,
                         category: formData.category,
                         frequency: mode === 'planning' ? formData.frequency : 'Once',
-                        date: formData.date,
+                        date: convertDDMMAAAAToYYYYMMDD(formData.date),
                         currency: formData.currency,
                         exchange_rate: mode === 'planning' ? undefined : formData.exchange_rate,
                         amount_stable: conversion.stable,
                         amount_local: mode === 'planning' ? undefined : conversion.local,
                         notes: formData.notes
+                    });
+                    setFormData({
+                        type: 'Needs',
+                        category: settings.categories[0] || '',
+                        frequency: mode === 'planning' ? 'Every Month' : 'Once',
+                        currency: mode === 'planning' ? 'STRONG' : settings.defaultCurrency,
+                        exchange_rate: settings.defaultExchangeRate,
+                        inputAmount: 0,
+                        notes: '',
+                        date: getTodayDDMMAAAA()
                     });
                 }} className="p-6 space-y-4">
 
@@ -89,8 +114,8 @@ export function TransactionModal({ isOpen, onClose, mode, settings, onSave }: Tx
                             </select>
                         </div>
                         <div>
-                            <label className="block text-xs font-semibold text-slate-400 mb-1">Fecha</label>
-                            <input type="date" className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-sm text-slate-200" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
+                            <label className="block text-xs font-semibold text-slate-400 mb-1">Fecha (DD/MM/AAAA)</label>
+                            <input type="date" placeholder="DD/MM/AAAA" className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-sm text-slate-200" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
                         </div>
                     </div>
 

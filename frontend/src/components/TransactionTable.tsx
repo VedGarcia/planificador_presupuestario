@@ -8,6 +8,27 @@ interface TableProps {
     onDelete: (id: number) => void;
 }
 
+function formatDate(dateStr: string): string {
+    if (!dateStr) return '';
+    const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoMatch) {
+        return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
+    }
+    const mdyMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (mdyMatch) {
+        const [, month, day, year] = mdyMatch;
+        return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+    }
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+    }
+    return dateStr;
+}
+
 export function TransactionTable({ viewMode, transactions, settings, onDelete }: TableProps) {
     const filtered = transactions.filter(t => t.mode === viewMode);
 
@@ -34,7 +55,7 @@ export function TransactionTable({ viewMode, transactions, settings, onDelete }:
                             <tr key={t.id} className="hover:bg-slate-700/10 transition-colors">
                                 <td className="py-3">
                                     <span className="font-semibold text-white block">{t.category}</span>
-                                    <span className="text-[11px] text-slate-500">{t.date} {t.notes ? `• ${t.notes}` : ''}</span>
+                                    <span className="text-[11px] text-slate-500">{formatDate(t.date)} {t.notes ? `• ${t.notes}` : ''}</span>
                                 </td>
                                 <td className="py-3">
                                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${t.type === 'Income' ? 'bg-emerald-500/10 text-emerald-400' : t.type === 'Needs' ? 'bg-blue-500/10 text-blue-400' : 'bg-pink-500/10 text-pink-400'}`}>{t.type}</span>
