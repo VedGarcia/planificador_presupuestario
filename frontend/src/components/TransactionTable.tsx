@@ -1,14 +1,14 @@
-import type { Transaction } from '../types';
+import type { Transaction, AppSettings } from '../types';
 import { Trash2 } from 'lucide-react';
 
 interface TableProps {
     viewMode: 'planning' | 'actual';
     transactions: Transaction[];
+    settings: AppSettings; // Agregado para inyección dinámica de nombres
     onDelete: (id: number) => void;
 }
 
-export function TransactionTable({ viewMode, transactions, onDelete }: TableProps) {
-    // Filtramos para que la tabla solo muestre lo correspondiente al suiche activo
+export function TransactionTable({ viewMode, transactions, settings, onDelete }: TableProps) {
     const filtered = transactions.filter(t => t.mode === viewMode);
 
     return (
@@ -23,9 +23,9 @@ export function TransactionTable({ viewMode, transactions, onDelete }: TableProp
                             <th className="pb-3">Concepto</th>
                             <th className="pb-3">Tipo</th>
                             {viewMode === 'planning' && <th className="pb-3">Periodicidad</th>}
-                            <th className="pb-3 text-right">Valor USD</th>
-                            {viewMode === 'actual' && <th className="pb-3 text-right">Monto Local</th>}
-                            {viewMode === 'actual' && <th className="pb-3 text-right">Tasa Arbitrada</th>}
+                            <th className="pb-3 text-right">Valor ({settings.strongCurrency})</th>
+                            {viewMode === 'actual' && <th className="pb-3 text-right">Monto ({settings.fragileCurrency})</th>}
+                            {viewMode === 'actual' && <th className="pb-3 text-right">Tasa Ref.</th>}
                             <th className="pb-3 text-center">Acción</th>
                         </tr>
                     </thead>
@@ -40,8 +40,8 @@ export function TransactionTable({ viewMode, transactions, onDelete }: TableProp
                                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${t.type === 'Income' ? 'bg-emerald-500/10 text-emerald-400' : t.type === 'Needs' ? 'bg-blue-500/10 text-blue-400' : 'bg-pink-500/10 text-pink-400'}`}>{t.type}</span>
                                 </td>
                                 {viewMode === 'planning' && <td className="py-3 text-slate-400 text-xs">{t.frequency}</td>}
-                                <td className="py-3 text-right font-mono font-medium text-white">${t.amount_stable.toFixed(2)}</td>
-                                {viewMode === 'actual' && <td className="py-3 text-right font-mono text-slate-400">{t.amount_local ? `${t.amount_local.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '-'}</td>}
+                                <td className="py-3 text-right font-mono font-medium text-white">{t.amount_stable.toFixed(2)} {settings.strongCurrency}</td>
+                                {viewMode === 'actual' && <td className="py-3 text-right font-mono text-slate-400">{t.amount_local ? `${t.amount_local.toLocaleString(undefined, { minimumFractionDigits: 2 })} ${settings.fragileCurrency}` : '-'}</td>}
                                 {viewMode === 'actual' && <td className="py-3 text-right font-mono text-slate-500 text-xs">{t.exchange_rate ? `x${t.exchange_rate}` : '-'}</td>}
                                 <td className="py-3 text-center">
                                     <button onClick={() => t.id && onDelete(t.id)} className="text-slate-500 hover:text-red-400 p-1"><Trash2 size={14} /></button>

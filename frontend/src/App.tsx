@@ -17,8 +17,9 @@ export default function App() {
   // Estado de la Configuración Interna
   const [settings, setSettings] = useState<AppSettings>({
     categories: ['Alquiler', 'Supermercado', 'Internet', 'Salario', 'Freelance', 'Delivery', 'Inversión'],
-    currencies: ['USD', 'LOCAL'],
-    defaultCurrency: 'LOCAL',
+    strongCurrency: 'USD',         // Valor por defecto inicial, editable en la UI
+    fragileCurrency: 'VES',        // Valor por defecto inicial, editable en la UI
+    defaultCurrency: 'FRAGILE',    // Inicia apuntando a la Moneda Local en el diario
     defaultExchangeRate: 45.50
   });
 
@@ -97,6 +98,7 @@ export default function App() {
         <TransactionTable
           viewMode={viewMode}
           transactions={transactions}
+          settings={settings}
           onDelete={deleteTransaction}
         />
       </main>

@@ -7,7 +7,7 @@ export interface Transaction {
     frequency: 'Every Month' | 'Every Week' | 'Once';
     amount_stable: number; // Moneda de referencia estándar (USD)
     amount_local?: number;  // Moneda inflacionaria
-    currency: 'USD' | 'LOCAL';
+    currency: string;
     exchange_rate?: number; // Tasa del día
     notes?: string;
 }
@@ -21,7 +21,8 @@ export interface BudgetSummary {
 
 export interface AppSettings {
     categories: string[];
-    currencies: string[];
-    defaultCurrency: 'USD' | 'LOCAL';
+    strongCurrency: string;
+    fragileCurrency: string;
+    defaultCurrency: 'STRONG' | 'FRAGILE';
     defaultExchangeRate: number;
 }
