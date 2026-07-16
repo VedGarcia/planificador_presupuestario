@@ -1,6 +1,6 @@
-import express from "express";
-import cors from "cors";
-import db from "./config/db";
+import express from 'express';
+import cors from 'cors';
+import db from './config/db';
 
 const app = express();
 const PORT = 3001;
@@ -8,80 +8,56 @@ const PORT = 3001;
 app.use(cors());
 app.use(express.json());
 
+// --- ENDPOINTS TRANSACCIONES ---
 app.get('/api/transactions', (req, res) => {
     try {
-        const statement = db.prepare(
-            `SELECT * FROM transactions ORDER BY id DESC`
-        );
-        const transactions = statement.all();
-        res.json(transactions);
+        res.json(db.prepare('SELECT * FROM transactions ORDER BY date DESC, id DESC').all());
     } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch transactions' });
+        res.status(500).json({ error: 'Error al obtener transacciones' });
     }
 });
 
 app.post('/api/transactions', (req, res) => {
-    const { mode, type, category, date, frequency, amount_stable, amount_local, currency, exchange_rate, notes } = req.body;
-
-    if (!mode || !type || !category || !frequency || amount_stable === undefined || !currency) {
-        return res.status(400).json({
-            error: 'Los campos mode, type, category, frequency, amount_stable y currency son obligatorios.'
-        });
-    }
+    const { mode, type, category, date, frequency, amount_stable, amount_local, currency, exchange_rate, goal_id, notes } = req.body;
     try {
         const insert = db.prepare(`
-            INSERT INTO transactions (mode, type, category, date, frequency, amount_stable, amount_local, currency, exchange_rate, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `);
-        const result = insert.run(
-            mode,
-            type,
-            category,
-            date || new Date().toISOString().split('T')[0],
-            frequency,
-            amount_stable,
-            amount_local !== undefined && amount_local !== null ? amount_local : null,
-            currency,
-            exchange_rate !== undefined && exchange_rate !== null ? exchange_rate : null,
-            notes || null
-        );
-
-        res.status(201).json({
-            id: result.lastInsertRowid,
-            mode,
-            type,
-            category,
-            date: date || new Date().toISOString().split('T')[0],
-            frequency,
-            amount_stable,
-            amount_local: amount_local !== undefined && amount_local !== null ? amount_local : null,
-            currency,
-            exchange_rate: exchange_rate !== undefined && exchange_rate !== null ? exchange_rate : null,
-            notes: notes || null
-        });
+      INSERT INTO transactions (mode, type, category, date, frequency, amount_stable, amount_local, currency, exchange_rate, goal_id, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+        const result = insert.run(mode, type, category, date, frequency, amount_stable, amount_local || null, currency, exchange_rate || null, goal_id || null, notes || null);
+        res.status(201).json({ id: result.lastInsertRowid });
     } catch (error) {
-        res.status(500).json({ error: 'Error al insertar la transacción.' });
+        res.status(500).json({ error: 'Error al insertar transacción' });
     }
 });
 
-// 3. Eliminar una transacción
 app.delete('/api/transactions/:id', (req, res) => {
-    const { id } = req.params;
-
     try {
-        const statement = db.prepare('DELETE FROM transactions WHERE id = ?');
-        const result = statement.run(id);
-
-        if (result.changes === 0) {
-            return res.status(404).json({ error: 'Transacción no encontrada.' });
-        }
-
-        res.json({ message: 'Transacción eliminada con éxito.' });
+        db.prepare('DELETE FROM transactions WHERE id = ?').run(req.params.id);
+        res.json({ message: 'Eliminado' });
     } catch (error) {
-        res.status(500).json({ error: 'Error al eliminar la transacción.' });
+        res.status(500).json({ error: 'Error al eliminar' });
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+// --- ENDPOINTS METAS DE AHORRO (GOALS) ---
+app.get('/api/goals', (req, res) => {
+    try {
+        res.json(db.prepare('SELECT * FROM savings_goals ORDER BY deadline_date ASC').all());
+    } catch (error) {
+        res.status(500).json({ error: 'Error al obtener metas' });
+    }
 });
+
+app.post('/api/goals', (req, res) => {
+    const { title, target_amount, deadline_date, notes } = req.body;
+    try {
+        const insert = db.prepare('INSERT INTO savings_goals (title, target_amount, deadline_date, notes) VALUES (?, ?, ?, ?)');
+        const result = insert.run(title, target_amount, deadline_date, notes || null);
+        res.status(201).json({ id: result.lastInsertRowid });
+    } catch (error) {
+        res.status(500).json({ error: 'Error al crear meta' });
+    }
+});
+
+app.listen(PORT, () => console.log(`🚀 Backend en http://localhost:${PORT}`));

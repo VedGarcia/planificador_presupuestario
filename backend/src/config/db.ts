@@ -5,19 +5,29 @@ const dbPath = path.resolve(__dirname, '../../finanzas.db');
 const db = new Database(dbPath, { verbose: console.log });
 
 db.exec(`
+  CREATE TABLE IF NOT EXISTS savings_goals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    target_amount REAL NOT NULL,
+    deadline_date TEXT NOT NULL,
+    notes TEXT
+  );
+
   CREATE TABLE IF NOT EXISTS transactions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    mode TEXT NOT NULL,          -- 'planning' (Presupuesto) o 'actual' (Libro diario real)
-    type TEXT NOT NULL,          -- 'Income', 'Needs', 'Wants'
-    category TEXT NOT NULL,      -- Ej: Alquiler, Salario, Delivery
-    date TEXT NOT NULL,          -- YYYY-MM-DD
-    frequency TEXT NOT NULL,     -- 'Every Month', 'Every Week', 'Once'
-    amount_stable REAL NOT NULL, -- Monto en Moneda Fuerte (USD) -> Base de la app
-    amount_local REAL,           -- Monto en Moneda Frágil (Moneda Local)
-    currency TEXT NOT NULL,      -- Moneda seleccionada en el registro: 'USD' o 'LOCAL'
-    exchange_rate REAL,          -- Tasa de cambio del día de la operación
-    notes TEXT
-  )
+    mode TEXT NOT NULL,
+    type TEXT NOT NULL,
+    category TEXT NOT NULL,
+    date TEXT NOT NULL,
+    frequency TEXT NOT NULL,
+    amount_stable REAL NOT NULL,
+    amount_local REAL,
+    currency TEXT NOT NULL,
+    exchange_rate REAL,
+    goal_id INTEGER,
+    notes TEXT,
+    FOREIGN KEY (goal_id) REFERENCES savings_goals(id) ON DELETE SET NULL
+  );
 `);
 
 export default db;
