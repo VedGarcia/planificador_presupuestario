@@ -1,14 +1,23 @@
 export interface Transaction {
     id?: number;
     mode: 'planning' | 'actual';
-    type: 'Income' | 'Needs' | 'Wants';
+    type: 'Income' | 'Needs' | 'Wants' | 'Savings';
     category: string;
     date: string;
     frequency: 'Every Month' | 'Every Week' | 'Once';
-    amount_stable: number; // Moneda de referencia estándar (USD)
-    amount_local?: number;  // Moneda inflacionaria
-    currency: string;
-    exchange_rate?: number; // Tasa del día
+    amount_stable: number;
+    amount_local?: number;
+    currency: 'STRONG' | 'FRAGILE';
+    exchange_rate?: number;
+    goal_id?: number;
+    notes?: string;
+}
+
+export interface SavingsGoal {
+    id?: number;
+    title: string;
+    target_amount: number;
+    deadline_date: string;
     notes?: string;
 }
 
@@ -17,6 +26,8 @@ export interface BudgetSummary {
     needs: number;
     wants: number;
     savings: number;
+    active_saved?: number;
+    idle_balance?: number;
 }
 
 export interface AppSettings {
