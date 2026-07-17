@@ -1,3 +1,4 @@
+// backend/src/config/db.ts
 import Database from 'better-sqlite3';
 import path from 'path';
 
@@ -28,6 +29,20 @@ db.exec(`
     notes TEXT,
     FOREIGN KEY (goal_id) REFERENCES savings_goals(id) ON DELETE SET NULL
   );
+
+  -- NUEVA TABLA: Persistencia de configuraciones (Solo 1 fila)
+  CREATE TABLE IF NOT EXISTS settings (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    categories TEXT NOT NULL,
+    strongCurrency TEXT NOT NULL,
+    fragileCurrency TEXT NOT NULL,
+    defaultCurrency TEXT NOT NULL,
+    defaultExchangeRate REAL NOT NULL
+  );
+
+  -- Semilla por defecto si está vacía
+  INSERT OR IGNORE INTO settings (id, categories, strongCurrency, fragileCurrency, defaultCurrency, defaultExchangeRate)
+  VALUES (1, '["Alquiler", "Supermercado", "Internet", "Salario", "Freelance", "Compra Divisa"]', 'USD', 'VES', 'FRAGILE', 45.50);
 `);
 
 export default db;

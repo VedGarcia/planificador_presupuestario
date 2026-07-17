@@ -59,5 +59,30 @@ app.post('/api/goals', (req, res) => {
         res.status(500).json({ error: 'Error al crear meta' });
     }
 });
+app.get('/api/settings', (req, res) => {
+    try {
+        const row = db.prepare('SELECT * FROM settings WHERE id = 1').get() as any;
+        res.json({
+            ...row,
+            categories: JSON.parse(row.categories) // Convertimos el string JSON a un Array
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Error al obtener configuraciones' });
+    }
+});
 
+app.put('/api/settings', (req, res) => {
+    const { categories, strongCurrency, fragileCurrency, defaultCurrency, defaultExchangeRate } = req.body;
+    try {
+        const update = db.prepare(`
+      UPDATE settings 
+      SET categories = ?, strongCurrency = ?, fragileCurrency = ?, defaultCurrency = ?, defaultExchangeRate = ?
+      WHERE id = 1
+    `);
+        update.run(JSON.stringify(categories), strongCurrency, fragileCurrency, defaultCurrency, defaultExchangeRate);
+        res.json({ message: 'Configuración actualizada con éxito' });
+    } catch (error) {
+        res.status(500).json({ error: 'Error al actualizar configuraciones' });
+    }
+});
 app.listen(PORT, () => console.log(`🚀 Backend en http://localhost:${PORT}`));
