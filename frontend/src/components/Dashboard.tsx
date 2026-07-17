@@ -20,33 +20,72 @@ export function DashboardPanels({ viewMode, summary, planData, realData, goals, 
         { name: 'Ahorro/Cobertura', Planificado: planData.savings, Real: realData.active_saved }
     ];
 
+    // Cálculos de porcentajes seguros (evitar dividir por cero)
+    const safeIncome = summary.income > 0 ? summary.income : 1;
+    const needsPct = ((summary.needs / safeIncome) * 100).toFixed(1);
+    const wantsPct = ((summary.wants / safeIncome) * 100).toFixed(1);
+    const savingsPct = viewMode === 'planning'
+        ? ((summary.savings / safeIncome) * 100).toFixed(1)
+        : (((summary.active_saved || 0) / safeIncome) * 100).toFixed(1);
+
     return (
         <>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            {/* TARJETAS KPI: Grid dinámico (4 en plan, 5 en diario) */}
+            <div className={`grid grid-cols-2 gap-4 ${viewMode === 'planning' ? 'lg:grid-cols-4' : 'lg:grid-cols-5'}`}>
                 <div className="bg-slate-800 p-5 rounded-xl border border-slate-700/50">
                     <span className="text-xs text-slate-400 block mb-1">Ingresos</span>
-                    <p className="text-2xl font-bold text-white">${summary.income.toFixed(2)}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-white">${summary.income.toFixed(2)}</p>
                 </div>
-                <div className="bg-slate-800 p-5 rounded-xl border border-slate-700/50">
-                    <span className="text-xs text-slate-400 block mb-1">Needs</span>
-                    <p className="text-2xl font-bold text-blue-400">${summary.needs.toFixed(2)}</p>
+
+                <div className="bg-slate-800 p-5 rounded-xl border border-slate-700/50 flex flex-col justify-between">
+                    <div>
+                        <span className="text-xs text-slate-400 block mb-1">Needs</span>
+                        <p className="text-xl sm:text-2xl font-bold text-blue-400">${summary.needs.toFixed(2)}</p>
+                    </div>
+                    <span className="text-[10px] text-slate-500 mt-2">
+                        <strong className={Number(needsPct) > 50 ? 'text-red-400' : 'text-slate-400'}>{needsPct}%</strong> / 50% (Max: ${(summary.income * 0.5).toFixed(0)})
+                    </span>
                 </div>
-                <div className="bg-slate-800 p-5 rounded-xl border border-slate-700/50">
-                    <span className="text-xs text-slate-400 block mb-1">Wants</span>
-                    <p className="text-2xl font-bold text-pink-400">${summary.wants.toFixed(2)}</p>
+
+                <div className="bg-slate-800 p-5 rounded-xl border border-slate-700/50 flex flex-col justify-between">
+                    <div>
+                        <span className="text-xs text-slate-400 block mb-1">Wants</span>
+                        <p className="text-xl sm:text-2xl font-bold text-pink-400">${summary.wants.toFixed(2)}</p>
+                    </div>
+                    <span className="text-[10px] text-slate-500 mt-2">
+                        <strong className={Number(wantsPct) > 30 ? 'text-red-400' : 'text-slate-400'}>{wantsPct}%</strong> / 30% (Max: ${(summary.income * 0.3).toFixed(0)})
+                    </span>
                 </div>
-                <div className={`p-5 rounded-xl border ${viewMode === 'actual' && (summary.idle_balance || 0) > 0 ? 'bg-yellow-900/20 border-yellow-700/50' : 'bg-slate-800 border-slate-700/50'}`}>
-                    <span className="text-xs text-slate-400 block mb-1">{viewMode === 'planning' ? 'Ahorro / Metas' : 'Saldo Ocioso (Riesgo)'}</span>
-                    <p className={`text-2xl font-bold ${viewMode === 'actual' && (summary.idle_balance || 0) > 0 ? 'text-yellow-400' : 'text-emerald-400'}`}>
-                        ${viewMode === 'planning' ? summary.savings.toFixed(2) : (summary.idle_balance || 0).toFixed(2)}
-                    </p>
-                    {viewMode === 'actual' && (summary.idle_balance || 0) > 0 && <span className="flex items-center gap-1 text-[10px] text-yellow-500 mt-1"><AlertTriangle size={10} /> ¡Capital devaluándose!</span>}
+
+                {/* Tarjeta de Ahorro / Blindaje */}
+                <div className="bg-slate-800 p-5 rounded-xl border border-slate-700/50 flex flex-col justify-between">
+                    <div>
+                        <span className="text-xs text-slate-400 block mb-1">{viewMode === 'planning' ? 'Ahorro / Metas' : 'Ahorro Blindado'}</span>
+                        <p className="text-xl sm:text-2xl font-bold text-emerald-400">
+                            ${viewMode === 'planning' ? summary.savings.toFixed(2) : (summary.active_saved || 0).toFixed(2)}
+                        </p>
+                    </div>
+                    <span className="text-[10px] text-slate-500 mt-2">
+                        <strong className={Number(savingsPct) < 20 ? 'text-yellow-400' : 'text-emerald-400'}>{savingsPct}%</strong> / 20% (Meta: ${(summary.income * 0.2).toFixed(0)})
+                    </span>
                 </div>
+
+                {/* Tarjeta 5: Saldo Ocioso (Solo visible en modo Diario) */}
+                {viewMode === 'actual' && (
+                    <div className={`p-5 rounded-xl border flex flex-col justify-center ${(summary.idle_balance || 0) > 0 ? 'bg-yellow-900/20 border-yellow-700/50' : 'bg-slate-800 border-slate-700/50'}`}>
+                        <span className="text-xs text-slate-400 block mb-1">Saldo Ocioso (Riesgo)</span>
+                        <p className={`text-xl sm:text-2xl font-bold ${(summary.idle_balance || 0) > 0 ? 'text-yellow-400' : 'text-slate-500'}`}>
+                            ${(summary.idle_balance || 0).toFixed(2)}
+                        </p>
+                        {(summary.idle_balance || 0) > 0 && <span className="flex items-center gap-1 text-[10px] text-yellow-500 mt-1"><AlertTriangle size={10} /> ¡Se está devaluando!</span>}
+                    </div>
+                )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="bg-slate-800 p-6 rounded-xl border border-slate-700/50 lg:col-span-2">
                     <h3 className="text-sm font-bold text-white mb-4">Contraste de Ejecución ({settings.strongCurrency})</h3>
+                    {/* ... (Gráfico igual) ... */}
                     <div className="w-full h-56">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={barChartData} margin={{ top: 0, right: 0, left: -15, bottom: 0 }}>
@@ -76,7 +115,7 @@ export function DashboardPanels({ viewMode, summary, planData, realData, goals, 
                                 </div>
                                 <div className="flex justify-between text-[10px] text-slate-500">
                                     <span>Vence: {g.deadline_date}</span>
-                                    <span>Cuota: ${g.requiredMonthlyQuota.toFixed(2)}/mes</span>
+                                    <span>Cuota Fija: ${g.requiredMonthlyQuota.toFixed(2)}/mes</span>
                                 </div>
                             </div>
                         ))}

@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import { useTransactions } from './hooks/useTransactions';
-import type { AppSettings, SavingsGoal, Transaction } from './types';
 import { TransactionModal, SettingsModal, GoalModal } from './components/Modals';
 import { DashboardPanels } from './components/Dashboard';
 import { TransactionTable } from './components/TransactionTable';
@@ -9,7 +8,8 @@ import { Layers, BookOpen, Settings as SettingsIcon, PlusCircle, Target, Downloa
 type PeriodFilter = 'M' | 'Q' | 'S' | 'A';
 
 export default function App() {
-  const { transactions, goals, loading, addTransaction, deleteTransaction, addGoal } = useTransactions();
+  // Extraemos TODO del hook conectado a la base de datos (incluyendo settings y updateSettings)
+  const { transactions, goals, settings, loading, addTransaction, deleteTransaction, addGoal, updateSettings } = useTransactions();
 
   const [viewMode, setViewMode] = useState<'planning' | 'actual'>('planning');
   const [timeFilter, setTimeFilter] = useState<PeriodFilter>('M');
@@ -18,16 +18,10 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
 
-  const [settings, setSettings] = useState<AppSettings>({
-    categories: ['Alquiler', 'Supermercado', 'Internet', 'Salario', 'Freelance', 'Compra Divisa'],
-    strongCurrency: 'USD',
-    fragileCurrency: 'VES',
-    defaultCurrency: 'FRAGILE',
-    defaultExchangeRate: 45.50
-  });
-
   // Exportar a CSV
   const handleExportCSV = () => {
+    if (!settings) return; // Validación de seguridad por si settings aún no carga
+
     const headers = ['Modo', 'Tipo', 'Fecha', 'Categoria', `Monto (${settings.strongCurrency})`, `Monto (${settings.fragileCurrency})`, 'Notas'];
     const rows = filteredData.map(t => [
       t.mode, t.type, t.date, t.category, t.amount_stable.toFixed(2),
@@ -119,7 +113,8 @@ export default function App() {
     return { plan, real };
   }, [filteredData, goalsProgress, timeFilter]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Cargando módulos...</div>;
+  // Importante: Esperamos a que 'settings' cargue de la base de datos antes de pintar la app
+  if (loading || !settings) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Cargando módulos y configuración...</div>;
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 p-6 font-sans space-y-6">
@@ -172,7 +167,8 @@ export default function App() {
       </main>
 
       <TransactionModal isOpen={isTxModalOpen} onClose={() => setIsTxModalOpen(false)} mode={viewMode} settings={settings} goals={goals} onSave={(tx) => { addTransaction(tx); setIsTxModalOpen(false); }} />
-      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} settings={settings} onSaveSettings={setSettings} />
+      {/* AQUÍ se inyecta updateSettings correctamente */}
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} settings={settings} onSaveSettings={updateSettings} />
       <GoalModal isOpen={isGoalModalOpen} onClose={() => setIsGoalModalOpen(false)} settings={settings} onSave={(g) => { addGoal(g); setIsGoalModalOpen(false); }} />
     </div>
   );

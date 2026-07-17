@@ -1,21 +1,24 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Transaction, SavingsGoal } from '../types';
+import type { Transaction, SavingsGoal, AppSettings } from '../types';
 
 const API_URL = 'http://localhost:3001/api';
 
 export const useTransactions = () => {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [goals, setGoals] = useState<SavingsGoal[]>([]);
+    const [settings, setSettings] = useState<AppSettings | null>(null);
     const [loading, setLoading] = useState(true);
 
     const fetchData = useCallback(async () => {
         try {
-            const [txRes, goalsRes] = await Promise.all([
+            const [txRes, goalsRes, settingsRes] = await Promise.all([
                 fetch(`${API_URL}/transactions`),
-                fetch(`${API_URL}/goals`)
+                fetch(`${API_URL}/goals`),
+                fetch(`${API_URL}/settings`)
             ]);
             setTransactions(await txRes.json());
             setGoals(await goalsRes.json());
+            setSettings(await settingsRes.json());
         } catch (error) {
             console.error('Fetch error:', error);
         } finally {
@@ -40,5 +43,10 @@ export const useTransactions = () => {
         fetchData();
     };
 
-    return { transactions, goals, loading, addTransaction, deleteTransaction, addGoal };
+    const updateSettings = async (newSettings: AppSettings) => {
+        await fetch(`${API_URL}/settings`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newSettings) });
+        fetchData(); // Recargar para aplicar los cambios
+    };
+
+    return { transactions, goals, settings, loading, addTransaction, deleteTransaction, addGoal, updateSettings };
 };

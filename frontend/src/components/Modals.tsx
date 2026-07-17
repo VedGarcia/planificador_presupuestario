@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { X, Calendar, Settings as SettingsIcon } from 'lucide-react';
+import { X, Settings as SettingsIcon } from 'lucide-react';
 import type { Transaction, AppSettings, SavingsGoal } from '../types';
 
 const getLocalYYYYMMDD = () => {
@@ -126,7 +126,10 @@ export function TransactionModal({ isOpen, onClose, mode, settings, goals, onSav
                             </select>
                         </div>
                     )}
-
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-400 mb-1">Notas / Detalles</label>
+                        <input type="text" placeholder="Ej: Compra mensual, pago parcial..." className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-sm text-slate-200" value={formData.notes || ''} onChange={e => setFormData({ ...formData, notes: e.target.value })} />
+                    </div>
                     <div className="flex gap-3 pt-2">
                         <button type="submit" className="w-full bg-emerald-600 text-white p-2.5 rounded-xl text-sm font-semibold">Guardar Registro</button>
                     </div>
@@ -215,14 +218,14 @@ export function SettingsModal({ isOpen, onClose, settings, onSaveSettings }: Set
                             <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-800/60">
                                 <div>
                                     <label className="block text-[11px] text-slate-400 mb-1">Diario por Defecto</label>
-                                    <select className="w-full bg-slate-800 border border-slate-700 rounded-lg p-1.5 text-xs text-slate-200" value={localSettings.defaultCurrency} onChange={e => setLocalSettings({ ...localSettings, defaultCurrency: e.target.value as any })}>
+                                    <select className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-slate-200 font-mono" value={localSettings.defaultCurrency} onChange={e => setLocalSettings({ ...localSettings, defaultCurrency: e.target.value as any })}>
                                         <option value="STRONG">{localSettings.strongCurrency || 'Fuerte'}</option>
                                         <option value="FRAGILE">{localSettings.fragileCurrency || 'Frágil'}</option>
                                     </select>
                                 </div>
                                 <div>
                                     <label className="block text-[11px] text-slate-400 mb-1">Tasa Base Corriente</label>
-                                    <input type="number" step="0.0001" className="w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-xs font-mono text-white" value={localSettings.defaultExchangeRate} onChange={e => setLocalSettings({ ...localSettings, defaultExchangeRate: parseFloat(e.target.value) || 1 })} />
+                                    <input type="number" step="0.0001" className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs font-mono text-white" value={localSettings.defaultExchangeRate} onChange={e => setLocalSettings({ ...localSettings, defaultExchangeRate: parseFloat(e.target.value) || 1 })} />
                                 </div>
                             </div>
                         </div>
